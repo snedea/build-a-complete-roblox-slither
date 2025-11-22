@@ -1,0 +1,21 @@
+ASSET PLACEHOLDER: boost.mp3
+
+This file represents a sound effect for the boost ability.
+
+Recommended sound characteristics:
+- Type: Whoosh or accelerating engine sound
+- Duration: 0.5-1 seconds
+- Pitch: Rising pitch for acceleration feel
+- Volume: Medium (not too loud to avoid spam annoyance)
+
+To add this sound:
+1. Find or create a boost sound effect
+2. Upload to Roblox as an audio asset
+3. Get the asset ID (e.g., rbxassetid://123456789)
+4. In code, create Sound instance and set SoundId to the asset ID
+5. Parent to snake head and play on boost activation
+
+Free sound resources:
+- Freesound.org
+- Zapsplat.com
+- Roblox Creator Store (search for "boost" or "whoosh")

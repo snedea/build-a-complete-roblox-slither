@@ -1,0 +1,20 @@
+ASSET PLACEHOLDER: death.mp3
+
+This file represents a sound effect for snake death.
+
+Recommended sound characteristics:
+- Type: Explosion, crash, or negative sound
+- Duration: 1-2 seconds
+- Pitch: Low for dramatic effect
+- Volume: Medium-high (important event)
+
+To add this sound:
+1. Find or create a death/explosion sound effect
+2. Upload to Roblox as an audio asset
+3. Get the asset ID
+4. Play on snake death in SnakeManager
+
+Suggested sounds:
+- Glass shatter
+- Explosion
+- Dramatic "game over" chord

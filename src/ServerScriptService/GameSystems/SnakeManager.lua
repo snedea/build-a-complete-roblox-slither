@@ -1,0 +1,480 @@
+-- SnakeManager.lua
+-- Core snake lifecycle - creation, movement validation, collision detection, death handling
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local SnakeConfig = require(ReplicatedStorage.Modules.SnakeConfig)
+local Maid = require(ReplicatedStorage.Shared.Maid)
+local SpatialGrid = require(ReplicatedStorage.Shared.SpatialGrid)
+local BodySegmentPool = require(ReplicatedStorage.Shared.BodySegmentPool)
+local Signal = require(ReplicatedStorage.Shared.Signal)
+
+local SnakeManager = {}
+SnakeManager._snakes = {} -- [player] = snakeData
+SnakeManager._spatialGrid = nil
+SnakeManager._bodySegmentPool = nil
+SnakeManager._snakeParent = nil
+
+-- Events
+SnakeManager.SnakeDied = Signal.new()
+SnakeManager.SnakeGrew = Signal.new()
+SnakeManager.FoodCollected = Signal.new()
+
+-- Dependencies (injected)
+SnakeManager.PlayerDataManager = nil
+SnakeManager.FoodSpawner = nil
+SnakeManager.ShieldManager = nil
+SnakeManager.RankService = nil
+SnakeManager.LeaderboardService = nil
+
+-- Initialize SnakeManager
+function SnakeManager:Initialize(dependencies)
+	self.PlayerDataManager = dependencies.PlayerDataManager
+	self.FoodSpawner = dependencies.FoodSpawner
+	self.ShieldManager = dependencies.ShieldManager
+	self.RankService = dependencies.RankService
+	self.LeaderboardService = dependencies.LeaderboardService
+
+	self._spatialGrid = SpatialGrid.new()
+	self._snakeParent = workspace:FindFirstChild("Snakes")
+
+	if not self._snakeParent then
+		self._snakeParent = Instance.new("Folder")
+		self._snakeParent.Name = "Snakes"
+		self._snakeParent.Parent = workspace
+	end
+
+	self._bodySegmentPool = BodySegmentPool.new(self._snakeParent)
+
+	-- Create snakes for existing players
+	for _, player in ipairs(Players:GetPlayers()) do
+		task.spawn(function()
+			self:CreateSnake(player)
+		end)
+	end
+
+	-- Handle new players
+	Players.PlayerAdded:Connect(function(player)
+		task.wait(1) -- Wait for data to load
+		self:CreateSnake(player)
+	end)
+
+	-- Handle player leaving
+	Players.PlayerRemoving:Connect(function(player)
+		self:KillSnake(player, nil, true) -- Silent cleanup
+	end)
+
+	-- Heartbeat loop for movement and collision
+	RunService.Heartbeat:Connect(function(dt)
+		self:_updateSnakes(dt)
+	end)
+
+	-- Network updates (20 Hz)
+	task.spawn(function()
+		while true do
+			task.wait(SnakeConfig.UPDATE_RATE)
+			self:_broadcastSnakeUpdates()
+		end
+	end)
+
+	print("[SnakeManager] Initialized")
+end
+
+-- Creates a snake for player
+function SnakeManager:CreateSnake(player)
+	-- Cleanup existing snake
+	if self._snakes[player] then
+		self:KillSnake(player, nil, true)
+	end
+
+	-- Get player customization
+	local customization = self.PlayerDataManager:GetCustomization(player)
+	local rank = self.PlayerDataManager:GetRank(player)
+
+	-- Random spawn position
+	local spawnPos = self:_getRandomSpawnPosition()
+
+	-- Create head
+	local head = Instance.new("Part")
+	head.Name = player.Name .. "_Head"
+	head.Size = Vector3.new(SnakeConfig.HEAD_SIZE, SnakeConfig.HEAD_SIZE, SnakeConfig.HEAD_SIZE)
+	head.Shape = Enum.PartType.Ball
+	head.Material = Enum.Material.Neon
+	head.Color = customization.color
+	head.CanCollide = false
+	head.Anchored = true
+	head.Position = spawnPos
+	head.TopSurface = Enum.SurfaceType.Smooth
+	head.BottomSurface = Enum.SurfaceType.Smooth
+	head.Parent = self._snakeParent
+
+	-- Create body segments
+	local bodySegments = {}
+	for i = 1, SnakeConfig.INITIAL_SEGMENTS do
+		local segment = self._bodySegmentPool:Acquire()
+		segment.Color = customization.color
+		segment.Position = spawnPos - Vector3.new(i * SnakeConfig.SEGMENT_SPACING, 0, 0)
+		table.insert(bodySegments, segment)
+
+		-- Add to spatial grid
+		self._spatialGrid:Insert(segment, segment.Position)
+	end
+
+	-- Create maid for cleanup
+	local maid = Maid.new()
+	maid:GiveTask(head)
+
+	-- Create snake data
+	local snake = {
+		player = player,
+		head = head,
+		bodySegments = bodySegments,
+		maid = maid,
+		speed = SnakeConfig.BASE_SPEED,
+		direction = Vector3.new(1, 0, 0), -- Initial direction: right
+		boostActive = false,
+		brakeActive = false,
+		boostCooldownRemaining = 0,
+		brakeCooldownRemaining = 0,
+		lastPosition = spawnPos,
+		lastMoveTime = os.clock(),
+		color = customization.color,
+		mouth = customization.mouth,
+		eyes = customization.eyes,
+		currentGold = 0, -- Session gold (resets on death)
+	}
+
+	self._snakes[player] = snake
+
+	-- Activate shield
+	local shieldDuration = self.RankService:GetShieldDuration(rank)
+	self.ShieldManager:ActivateShield(player, shieldDuration)
+
+	print(string.format("[SnakeManager] Created snake for %s", player.Name))
+end
+
+-- Gets random spawn position
+function SnakeManager:_getRandomSpawnPosition()
+	local x = math.random(SnakeConfig.SPAWN_MIN.X, SnakeConfig.SPAWN_MAX.X)
+	local z = math.random(SnakeConfig.SPAWN_MIN.Z, SnakeConfig.SPAWN_MAX.Z)
+	return Vector3.new(x, 2, z)
+end
+
+-- Moves snake (called via RemoteEvent)
+function SnakeManager:MoveSnake(player, direction)
+	local snake = self._snakes[player]
+	if not snake then
+		return
+	end
+
+	-- Validate direction (must be unit vector)
+	if direction.Magnitude > 1.1 or direction.Magnitude < 0.9 then
+		warn(string.format("[SnakeManager] Invalid direction from %s: %s", player.Name, tostring(direction)))
+		return
+	end
+
+	-- Normalize and store direction
+	snake.direction = direction.Unit
+end
+
+-- Activates boost
+function SnakeManager:ActivateBoost(player)
+	local snake = self._snakes[player]
+	if not snake then
+		return
+	end
+
+	if snake.boostCooldownRemaining > 0 then
+		return -- Still on cooldown
+	end
+
+	snake.boostActive = true
+	snake.brakeActive = false -- Can't boost and brake simultaneously
+	snake.speed = SnakeConfig.BASE_SPEED * SnakeConfig.BOOST_MULTIPLIER
+
+	local rank = self.PlayerDataManager:GetRank(player)
+	local cooldown = self.RankService:GetBoostCooldown(rank)
+	snake.boostCooldownRemaining = cooldown
+
+	print(string.format("[SnakeManager] %s activated boost", player.Name))
+end
+
+-- Activates brake
+function SnakeManager:ActivateBrake(player)
+	local snake = self._snakes[player]
+	if not snake then
+		return
+	end
+
+	if snake.brakeCooldownRemaining > 0 then
+		return -- Still on cooldown
+	end
+
+	snake.brakeActive = true
+	snake.boostActive = false -- Can't boost and brake simultaneously
+	snake.speed = SnakeConfig.BASE_SPEED * SnakeConfig.BRAKE_MULTIPLIER
+
+	local rank = self.PlayerDataManager:GetRank(player)
+	local cooldown = self.RankService:GetBrakeCooldown(rank)
+	snake.brakeCooldownRemaining = cooldown
+
+	print(string.format("[SnakeManager] %s activated brake", player.Name))
+end
+
+-- Grows snake
+function SnakeManager:GrowSnake(player, segmentCount)
+	local snake = self._snakes[player]
+	if not snake then
+		return
+	end
+
+	for i = 1, segmentCount do
+		if #snake.bodySegments >= SnakeConfig.MAX_SEGMENTS then
+			break -- Max length reached
+		end
+
+		-- Acquire segment from pool
+		local segment = self._bodySegmentPool:Acquire()
+		segment.Color = snake.color
+
+		-- Position at tail
+		local lastSegment = snake.bodySegments[#snake.bodySegments]
+		segment.Position = lastSegment.Position
+
+		table.insert(snake.bodySegments, segment)
+		self._spatialGrid:Insert(segment, segment.Position)
+	end
+
+	self.SnakeGrew:Fire(player, #snake.bodySegments)
+	self.LeaderboardService:SetStat(player, "length", #snake.bodySegments)
+end
+
+-- Kills snake
+function SnakeManager:KillSnake(player, killer, silent)
+	local snake = self._snakes[player]
+	if not snake then
+		return
+	end
+
+	-- Scatter food
+	local snakeValue = snake.currentGold or 0
+	local foodCount = math.floor(snakeValue * 0.5) -- 50% of gold as food
+	if foodCount > 0 then
+		self.FoodSpawner:ScatterFood(snake.head.Position, foodCount)
+	end
+
+	-- Update stats
+	if killer and killer ~= player then
+		self.LeaderboardService:IncrementStat(killer, "kills", 1)
+		self.PlayerDataManager:IncrementStat(killer, "totalKills", 1)
+	end
+
+	-- Cleanup
+	self._snakes[player] = nil
+	snake.maid:DoCleaning()
+
+	-- Release body segments
+	for _, segment in ipairs(snake.bodySegments) do
+		self._spatialGrid:Remove(segment)
+		self._bodySegmentPool:Release(segment)
+	end
+
+	-- Fire event
+	if not silent then
+		self.SnakeDied:Fire(player, killer)
+		print(string.format("[SnakeManager] %s's snake died", player.Name))
+	end
+end
+
+-- Updates snakes (movement, collisions, food collection)
+function SnakeManager:_updateSnakes(dt)
+	for player, snake in pairs(self._snakes) do
+		-- Update cooldowns
+		if snake.boostCooldownRemaining > 0 then
+			snake.boostCooldownRemaining = math.max(0, snake.boostCooldownRemaining - dt)
+		end
+		if snake.brakeCooldownRemaining > 0 then
+			snake.brakeCooldownRemaining = math.max(0, snake.brakeCooldownRemaining - dt)
+		end
+
+		-- Reset speed if not boosting/braking
+		if snake.boostActive and snake.boostCooldownRemaining == 0 then
+			snake.boostActive = false
+			snake.speed = SnakeConfig.BASE_SPEED
+		end
+		if snake.brakeActive and snake.brakeCooldownRemaining == 0 then
+			snake.brakeActive = false
+			snake.speed = SnakeConfig.BASE_SPEED
+		end
+
+		-- Move head
+		local movement = snake.direction * snake.speed * dt
+		local newPosition = snake.head.Position + movement
+
+		-- Clamp to arena bounds
+		newPosition = Vector3.new(
+			math.clamp(newPosition.X, SnakeConfig.ARENA_MIN.X, SnakeConfig.ARENA_MAX.X),
+			2,
+			math.clamp(newPosition.Z, SnakeConfig.ARENA_MIN.Z, SnakeConfig.ARENA_MAX.Z)
+		)
+
+		snake.head.Position = newPosition
+
+		-- Update body segments (follow head)
+		self:_updateBodySegments(snake)
+
+		-- Check collisions (if not shielded)
+		if not self.ShieldManager:IsShielded(player) then
+			self:_checkCollisions(player, snake)
+		end
+
+		-- Check food collection (with magnet)
+		self:_checkFoodCollection(player, snake)
+	end
+end
+
+-- Updates body segments to follow head
+function SnakeManager:_updateBodySegments(snake)
+	local positions = {snake.head.Position}
+
+	-- Calculate segment positions
+	for i, segment in ipairs(snake.bodySegments) do
+		local targetPos = positions[i]
+		local currentPos = segment.Position
+
+		-- Interpolate towards target
+		local direction = (targetPos - currentPos).Unit
+		local distance = (targetPos - currentPos).Magnitude
+
+		if distance > SnakeConfig.SEGMENT_SPACING then
+			local newPos = currentPos + direction * math.min(distance - SnakeConfig.SEGMENT_SPACING, snake.speed * RunService.Heartbeat:Wait())
+			segment.Position = newPos
+
+			-- Update spatial grid
+			self._spatialGrid:Insert(segment, newPos)
+		end
+
+		table.insert(positions, segment.Position)
+	end
+end
+
+-- Checks collisions
+function SnakeManager:_checkCollisions(player, snake)
+	local headPos = snake.head.Position
+
+	-- Get nearby parts
+	local nearby = self._spatialGrid:GetNearby(headPos, SnakeConfig.COLLISION_RADIUS * 2)
+
+	for _, part in ipairs(nearby) do
+		if part.Name == "BodySegment" then
+			-- Check distance
+			local distance = (part.Position - headPos).Magnitude
+			if distance < SnakeConfig.COLLISION_RADIUS then
+				-- Find owner
+				local ownerPlayer = self:_findSegmentOwner(part)
+
+				-- Self-collision grace period
+				if ownerPlayer == player then
+					local segmentIndex = table.find(snake.bodySegments, part)
+					if segmentIndex and segmentIndex <= SnakeConfig.SELF_COLLISION_GRACE then
+						continue -- Skip self-collision on first few segments
+					end
+				end
+
+				-- Collision detected
+				self:KillSnake(player, ownerPlayer)
+				return
+			end
+		end
+	end
+end
+
+-- Finds which player owns a segment
+function SnakeManager:_findSegmentOwner(segment)
+	for player, snake in pairs(self._snakes) do
+		if table.find(snake.bodySegments, segment) then
+			return player
+		end
+	end
+	return nil
+end
+
+-- Checks food collection with magnet
+function SnakeManager:_checkFoodCollection(player, snake)
+	local rank = self.PlayerDataManager:GetRank(player)
+	local magnetRange = self.RankService:GetMagnetRange(rank)
+
+	local nearbyFood = self.FoodSpawner:GetFoodInRange(snake.head.Position, magnetRange)
+
+	for _, food in ipairs(nearbyFood) do
+		local success, foodData = self.FoodSpawner:CollectFood(player, food)
+
+		if success and foodData then
+			-- Award gold
+			local FoodConfig = require(ReplicatedStorage.Modules.FoodConfig)
+			local goldReward = FoodConfig.CalculateReward(foodData.data, rank)
+
+			self.PlayerDataManager:AddGold(player, goldReward)
+			snake.currentGold = (snake.currentGold or 0) + goldReward
+
+			-- Grow snake
+			self:GrowSnake(player, SnakeConfig.FOOD_GROWTH_SEGMENTS)
+
+			-- Update stats
+			self.LeaderboardService:IncrementStat(player, "food", 1)
+			self.PlayerDataManager:IncrementStat(player, "totalFood", 1)
+
+			-- Check rank up
+			local currentRank = rank
+			local newRank = self.RankService:CheckRankUp(currentRank, self.PlayerDataManager:GetGold(player))
+			if newRank > currentRank then
+				self.PlayerDataManager:SetRank(player, newRank)
+
+				-- Notify client
+				local remoteEvent = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("GameEvent")
+				if remoteEvent then
+					remoteEvent:FireClient(player, "RankUp", newRank)
+				end
+			end
+
+			-- Notify client
+			local remoteEvent = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("GameEvent")
+			if remoteEvent then
+				remoteEvent:FireClient(player, "FoodCollected", goldReward)
+			end
+
+			self.FoodCollected:Fire(player, goldReward)
+		end
+	end
+end
+
+-- Broadcasts snake updates to clients
+function SnakeManager:_broadcastSnakeUpdates()
+	local updates = {}
+
+	for player, snake in pairs(self._snakes) do
+		updates[player.UserId] = {
+			headPos = snake.head.Position,
+			direction = snake.direction,
+			length = #snake.bodySegments,
+			color = snake.color,
+		}
+	end
+
+	-- Broadcast to all players
+	local remoteEvent = ReplicatedStorage:FindFirstChild("RemoteEvents") and ReplicatedStorage.RemoteEvents:FindFirstChild("GameEvent")
+	if remoteEvent then
+		for _, player in ipairs(Players:GetPlayers()) do
+			remoteEvent:FireClient(player, "UpdateSnakes", updates)
+		end
+	end
+end
+
+-- Gets snake data
+function SnakeManager:GetSnakeData(player)
+	return self._snakes[player]
+end
+
+return SnakeManager

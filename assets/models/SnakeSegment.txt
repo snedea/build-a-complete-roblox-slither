@@ -1,0 +1,23 @@
+ASSET PLACEHOLDER: SnakeSegment.rbxm
+
+This file represents a Roblox model asset for snake body segments.
+
+To create this asset:
+1. Open Roblox Studio
+2. Create a Part with the following properties:
+   - Shape: Ball
+   - Size: Vector3.new(4, 4, 4)
+   - Material: SmoothPlastic
+   - Color: Matches head color (will be set dynamically)
+   - Anchored: true
+   - CanCollide: false
+   
+3. Optionally add visual details:
+   - Surface texture or pattern
+   - Slight transparency for visual depth
+   
+4. Name the part "SnakeSegment"
+5. Right-click and "Save to File" as SnakeSegment.rbxm
+
+This model will be used by ObjectPool to create reusable body segments.
+The template is cloned 2000 times and pooled for performance.

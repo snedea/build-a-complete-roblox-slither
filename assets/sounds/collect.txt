@@ -1,0 +1,20 @@
+ASSET PLACEHOLDER: collect.mp3
+
+This file represents a sound effect for collecting food.
+
+Recommended sound characteristics:
+- Type: Pop, coin, or pickup sound
+- Duration: 0.2-0.5 seconds
+- Pitch: Medium-high for satisfying feedback
+- Volume: Low-medium (plays frequently)
+
+To add this sound:
+1. Find or create a collect/pickup sound effect
+2. Upload to Roblox as an audio asset
+3. Get the asset ID
+4. Play on food collection in SnakeManager
+
+Suggested sounds:
+- Classic coin sound
+- Pop/bubble sound
+- Ding/chime sound

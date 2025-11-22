@@ -1,0 +1,23 @@
+ASSET PLACEHOLDER: FoodPellet.rbxm
+
+This file represents a Roblox model asset for food pellets.
+
+To create this asset:
+1. Open Roblox Studio
+2. Create a Part with the following properties:
+   - Shape: Ball
+   - Size: Vector3.new(1, 1, 1)
+   - Material: Neon
+   - Color: Bright green (or random colors for variety)
+   - Anchored: true
+   - CanCollide: false
+   
+3. Add visual effects:
+   - PointLight (Brightness: 1, Range: 5)
+   - Sparkles or ParticleEmitter for extra flair
+   
+4. Name the part "FoodPellet"
+5. Right-click and "Save to File" as FoodPellet.rbxm
+
+This model is spawned by FoodSpawner using Poisson disk sampling.
+Gold value is stored in an IntValue named "GoldValue".

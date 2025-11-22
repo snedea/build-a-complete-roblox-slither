@@ -1,0 +1,41 @@
+{
+  "build_start": "2025-11-22T08:38:31.517632",
+  "context_metrics": {
+    "max_context_window": 200000,
+    "model": "claude-sonnet-4",
+    "by_phase": {
+      "phase_scout": {
+        "tokens_used": 9615,
+        "percentage": 4.81,
+        "zone": "smart",
+        "budget_allocated": 14000,
+        "over_budget": false,
+        "duration_seconds": 283.87,
+        "exit_code": 0,
+        "timestamp": "2025-11-22T10:01:51.450238"
+      },
+      "phase_architect": {
+        "tokens_used": 12696,
+        "percentage": 6.35,
+        "zone": "smart",
+        "budget_allocated": 14000,
+        "over_budget": false,
+        "duration_seconds": 649.27,
+        "exit_code": 0,
+        "timestamp": "2025-11-22T09:37:18.760977"
+      }
+    }
+  },
+  "phases": {
+    "phase_scout": {
+      "status": "completed",
+      "duration_seconds": 283.87,
+      "timestamp": "2025-11-22T10:01:51.450245"
+    },
+    "phase_architect": {
+      "status": "completed",
+      "duration_seconds": 649.27,
+      "timestamp": "2025-11-22T09:37:18.760985"
+    }
+  }
+}

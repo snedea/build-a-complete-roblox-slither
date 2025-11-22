@@ -1,0 +1,76 @@
+{
+  "name": "SlitherSimulator",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Modules": {
+        "$path": "src/ReplicatedStorage/Modules"
+      },
+      "Shared": {
+        "$path": "src/ReplicatedStorage/Shared"
+      },
+      "RemoteEvents": {
+        "$className": "Folder",
+        "GameEvent": {
+          "$className": "RemoteEvent"
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "GameSystems": {
+        "$path": "src/ServerScriptService/GameSystems"
+      },
+      "Tests": {
+        "$path": "src/ServerScriptService/Tests"
+      },
+      "GameInitializer": {
+        "$path": "src/ServerScriptService/GameInitializer.server.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "$path": "src/StarterPlayer/StarterPlayerScripts"
+      }
+    },
+    "StarterGui": {
+      "$className": "StarterGui",
+      "ScreenGui": {
+        "$className": "ScreenGui",
+        "$properties": {
+          "ResetOnSpawn": false
+        },
+        "HUD": {
+          "$path": "src/StarterGui/HUD"
+        },
+        "Leaderboard": {
+          "$path": "src/StarterGui/Leaderboard"
+        },
+        "CustomizationMenu": {
+          "$path": "src/StarterGui/CustomizationMenu"
+        },
+        "RevivePrompt": {
+          "$path": "src/StarterGui/RevivePrompt"
+        },
+        "ShieldTimer": {
+          "$path": "src/StarterGui/ShieldTimer"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "Arena": {
+        "$className": "Folder"
+      },
+      "Snakes": {
+        "$className": "Folder"
+      },
+      "Food": {
+        "$className": "Folder"
+      }
+    }
+  }
+}

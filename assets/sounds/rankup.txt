@@ -1,0 +1,21 @@
+ASSET PLACEHOLDER: rankup.mp3
+
+This file represents a sound effect for ranking up.
+
+Recommended sound characteristics:
+- Type: Fanfare, level up, or achievement sound
+- Duration: 1-3 seconds
+- Pitch: Ascending for celebratory feel
+- Volume: High (rare, important event)
+
+To add this sound:
+1. Find or create a rank up/achievement sound effect
+2. Upload to Roblox as an audio asset
+3. Get the asset ID
+4. Play on rank up in RankService
+
+Suggested sounds:
+- Victory fanfare
+- Level up chime
+- Achievement unlock sound
+- Triumphant musical flourish

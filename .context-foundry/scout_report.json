@@ -1,0 +1,244 @@
+{
+  "sessionId": "build-a-complete-roblox-slither",
+  "phase": "Scout",
+  "date": "2025-11-22",
+  "executiveSummary": {
+    "description": "Building a complete multiplayer Slither.io-style game in Roblox with snake movement, body segment following, collision detection, boost/brake abilities, food spawning, rank progression (20 ranks), shield system, currency (gold + revive donuts), customization, leaderboards, and mobile support. This is a complex multiplayer game requiring careful client-server architecture, real-time physics, data persistence, and performance optimization for potentially dozens of snakes with hundreds of body segments each.",
+    "keyChallenges": [
+      "Smooth snake body following at 60 FPS with network sync",
+      "Fair collision detection (head vs. body)",
+      "Scalable food spawning",
+      "Secure rank/currency progression",
+      "Efficient leaderboard updates",
+      "Mobile input handling"
+    ]
+  },
+  "pastLearningsApplied": {
+    "robloxRemoteEventsSecurity": "All snake movement, food collection, and ability activation must validate on server. Never trust client speed/position/gold amounts.",
+    "robloxDatastoreBestPractices": "Player rank, gold, customization, and revive donuts must use UpdateAsync with retry logic and pcall error handling.",
+    "robloxPerformance001": "With potentially 20+ snakes \u00d7 50+ body segments = 1000+ parts, must cache :GetChildren() results and use spatial partitioning. Avoid tight loops in Heartbeat.",
+    "robloxMemoryLeak001": "Snake body segments are dynamically created/destroyed. Must use Maid/Janitor pattern to disconnect Touched events and clean up references on death.",
+    "robloxAsyncPatternsSignalsMaids": "Use signals for snake events (food collected, rank up, death) to decouple systems. Bind all Touched connections through Maid and destroy on snake cleanup.",
+    "robloxModuleStructure": "Organize as services in ServerScriptService (SnakeManager, FoodSpawner, RankService, LeaderboardService) with shared config in ReplicatedStorage.",
+    "robloxStudioSafetyNet": "Mock DataStore in Studio, provide fallback spawn arena if map not loaded, guard UI against nil rank/gold values.",
+    "robloxAdvancedModulesAndPerformance": "Throttle body segment updates to 0.05-0.1s for non-local snakes (interpolate on client), use spatial grid for collision checks instead of checking every snake pair."
+  },
+  "keyRequirements": {
+    "coreGameplay": [
+      "Smooth head follows mouse/touch, body segments trail behind using CFrame interpolation",
+      "Death on head touching other snake bodies (not own body), wraparound at arena edges",
+      "Boost increases speed + visual glow (cooldown), Brake reduces speed + red tint (sharp turns, cooldown)",
+      "Continuous food generation across arena, auto-despawn when collected",
+      "Snake length increases on food consumption (spawn new body segments dynamically)",
+      "5-second spawn protection (10s for Rank 1), light blue visual + countdown timer, invulnerability during duration"
+    ],
+    "progressionAndEconomy": [
+      "20 ranks unlocked by gold, each rank grants magnet range increase + boost/brake improvements",
+      "Gold from food (5-195 based on rank), Revive Donuts (3 free, max 12, random arena spawns)",
+      "On death scatter food from snake body, offer revive with donut (respawn with shield)"
+    ],
+    "socialAndCompetition": [
+      "Monthly + all-time for Kills, Longest Length, Hungriest (total food). Top players get pink numbered badges.",
+      "Colors (preset + RGB), mouth/eye styles, visual effects, emotes. Persist to DataStore."
+    ],
+    "technical": [
+      "Dynamic thumbstick movement, touch boost/brake buttons, pinch-to-zoom, swipe-to-pan camera",
+      "Zoom out/in controls, larger snakes have wider FOV",
+      "Smooth 60 FPS with multiple snakes, efficient body segment updates, spatial collision optimization"
+    ]
+  },
+  "technologyStack": {
+    "projectStructure": "Rojo-based Roblox game project (`default.project.json`)",
+    "coreSystems": [
+      "SnakeConfig.lua - Snake physics constants (speed, turn rate, boost multiplier, segment spacing)",
+      "RankConfig.lua - 20 rank thresholds, magnet ranges, boost/brake stats",
+      "FoodConfig.lua - Food spawn rates, gold rewards by rank",
+      "CustomizationData.lua - Available colors, mouth/eye styles, effects"
+    ],
+    "serverServices": [
+      "SnakeManager.lua - Snake creation, movement validation, collision detection, death handling",
+      "FoodSpawner.lua - Continuous food spawning with spatial distribution",
+      "RankService.lua - Rank progression calculations, magnet range application",
+      "LeaderboardService.lua - Monthly/all-time stat tracking (OrderedDataStore)",
+      "PlayerDataManager.lua - DataStore persistence (rank, gold, donuts, customization, stats)",
+      "ReviveService.lua - Donut consumption, respawn logic",
+      "ShieldManager.lua - Spawn protection timers, invulnerability logic"
+    ],
+    "clientScripts": [
+      "SnakeController.lua - Mouse/touch input \u2192 server movement requests, local prediction",
+      "CameraController.lua - Zoom controls, FOV scaling by snake size, pinch/pan for mobile",
+      "MobileControls.lua - Thumbstick + boost/brake buttons (mobile only)",
+      "SnakeRenderer.lua - Smooth body segment interpolation for other players' snakes"
+    ],
+    "ui": [
+      "HUD.lua - Gold, rank, length, kill count display",
+      "Leaderboard.lua - Top players, monthly/all-time tabs",
+      "CustomizationMenu.lua - Color picker, mouth/eye selection, effects",
+      "RevivePrompt.lua - Donut revival UI on death",
+      "ShieldTimer.lua - Countdown overlay during spawn protection"
+    ],
+    "rationale": "Roblox + Rojo for version-controlled Luau development. Server-authoritative architecture prevents exploits (client sends input, server validates and applies). ModuleScript organization for testability. DataStore for persistence. OrderedDataStore for leaderboards."
+  },
+  "criticalArchitectureRecommendations": [
+    {
+      "title": "Spatial Partitioning for Collision Detection",
+      "description": "With 20+ snakes \u00d7 50+ segments, checking every head against every body segment = O(n\u00b2) disaster. Use spatial grid (64\u00d764 studs cells) to only check nearby segments. Update grid on segment position changes (throttled)."
+    },
+    {
+      "title": "Client-Side Body Interpolation with Server Authority",
+      "description": "Don't replicate every body segment position every frame (bandwidth explosion). Server sends head position + rotation at 20Hz. Client interpolates body segments locally using bezier curves or spring dampening. Server only validates collisions."
+    },
+    {
+      "title": "Dynamic Body Segment Pooling",
+      "description": "Creating/destroying 50+ parts per snake on grow/death causes GC spikes. Use object pool pattern: preallocate 1000 body segments, activate/deactivate as needed. Bind to Maid for cleanup."
+    },
+    {
+      "title": "Leaderboard Update Throttling",
+      "description": "Updating OrderedDataStore every food collection = rate limit death. Batch updates: cache stats in memory, flush to OrderedDataStore every 60 seconds + on player leave. Use UpdateAsync to prevent race conditions."
+    },
+    {
+      "title": "Input Validation for Speed Exploiters",
+      "description": "Client sends movement direction, server calculates position based on validated speed (base + boost multiplier). Reject impossible positions (teleportation detection)."
+    }
+  ],
+  "mainChallengesAndMitigations": [
+    {
+      "challenge": "Smooth 60 FPS snake movement with network latency",
+      "mitigation": "Client-side prediction for local snake (instant response), server reconciliation. Other snakes use interpolation buffer (0.1s delay, smooth). Physics timestep independent rendering."
+    },
+    {
+      "challenge": "Fair collision detection with body segment lag",
+      "mitigation": "Server uses authoritative hitboxes. On collision, verify both client and server agree (within tolerance). If latency too high, favor defender (snake gets shield grace period). Store last 5 server positions for rollback verification."
+    },
+    {
+      "challenge": "Food spawning distribution (avoid clustering)",
+      "mitigation": "Use Poisson disk sampling for even distribution. Track food density per grid cell, spawn in low-density areas. Despawn old food after 5 minutes to prevent buildup."
+    },
+    {
+      "challenge": "Mobile touch controls vs. desktop mouse (fairness)",
+      "mitigation": "Normalize input speeds - both control schemes achieve same max turn rate. Mobile thumbstick has same precision as mouse (use unit vector direction). Test on iOS/Android devices."
+    },
+    {
+      "challenge": "DataStore failures during peak traffic",
+      "mitigation": "Implement 3-retry exponential backoff. Cache all data in memory (ServerStorage). On save failure, queue for retry. Warn player 'Data saving failed, don't leave yet'. Provide manual save button."
+    },
+    {
+      "challenge": "Memory leaks from dynamic body segments",
+      "mitigation": "Strict Maid cleanup pattern. Every snake gets Maid instance. All segments, connections, tweens added to Maid. On death: `snakeMaid:DoCleaning()` destroys everything. Profile with DevConsole memory tab."
+    }
+  ],
+  "testingApproach": {
+    "unitTests": [
+      "SnakeManager.spec.lua: Movement validation, collision detection, death handling",
+      "RankService.spec.lua: Rank calculations, magnet range formulas",
+      "FoodSpawner.spec.lua: Spawn distribution (Poisson disk), density checks",
+      "PlayerDataManager.spec.lua: DataStore mock, save/load, migration"
+    ],
+    "integrationTests": [
+      "Movement: 2+ players, verify snake follows mouse/touch accurately, body segments trail smoothly",
+      "Collision: Snake head touches body \u2192 death, food scatters, leaderboard updates",
+      "Boost/Brake: Cooldowns respect rank bonuses, visual effects show/hide correctly",
+      "Food Collection: Gold awarded matches rank, magnet auto-collects nearby food",
+      "Rank Progression: Collect enough gold \u2192 rank up, magnet range increases, UI updates",
+      "Shield: Spawn with shield, countdown displays, collision ignored for duration",
+      "Leaderboards: Kill/length/food stats update, monthly resets work, badges show top 10",
+      "Revival: Die with donuts \u2192 prompt shows, revive respawns with shield",
+      "Customization: Change colors/mouth/eyes \u2192 persists on rejoin",
+      "Mobile: Test on device - thumbstick moves, pinch zooms, boost/brake buttons work"
+    ],
+    "performanceBenchmarks": {
+      "target": "60 FPS with 20 snakes (50 segments each = 1000 parts)",
+      "collision": "<5ms per frame for spatial grid queries",
+      "network": "<5KB/s per player for snake position updates",
+      "memory": "<500MB server memory (object pooling prevents leaks)"
+    },
+    "loadTesting": "Stress test with 50+ concurrent players, monitor server performance (script execution time, memory usage), check DataStore throttling (should stay under rate limits)"
+  },
+  "timelineEstimate": {
+    "estimatedDevelopment": "3-4 weeks for complete implementation with testing, assuming 20-30 hours/week.",
+    "phasedBreakdown": [
+      "Phase 1 (Week 1): Core snake movement, body following, basic collision, food spawning \u2192 Playable prototype",
+      "Phase 2 (Week 2): Boost/brake, shield, rank system, gold currency, magnet \u2192 Core loop complete",
+      "Phase 3 (Week 3): Leaderboards, customization, revival system, DataStore persistence \u2192 Full features",
+      "Phase 4 (Week 4): Mobile controls, camera system, polish (VFX, SFX), performance optimization, testing"
+    ]
+  },
+  "robloxSpecificPatternsApplied": {
+    "directoryLayout": "src/\n\u251c\u2500\u2500 ServerScriptService/\n\u2502   \u251c\u2500\u2500 GameSystems/\n\u2502   \u2502   \u251c\u2500\u2500 SnakeManager.lua\n\u2502   \u2502   \u251c\u2500\u2500 FoodSpawner.lua\n\u2502   \u2502   \u251c\u2500\u2500 RankService.lua\n\u2502   \u2502   \u251c\u2500\u2500 LeaderboardService.lua\n\u2502   \u2502   \u251c\u2500\u2500 PlayerDataManager.lua\n\u2502   \u2502   \u251c\u2500\u2500 ReviveService.lua\n\u2502   \u2502   \u2514\u2500\u2500 ShieldManager.lua\n\u2502   \u2514\u2500\u2500 Tests/\n\u2502       \u251c\u2500\u2500 SnakeManager.spec.lua\n\u2502       \u2514\u2500\u2500 RankService.spec.lua\n\u251c\u2500\u2500 ReplicatedStorage/\n\u2502   \u251c\u2500\u2500 Modules/\n\u2502   \u2502   \u251c\u2500\u2500 SnakeConfig.lua\n\u2502   \u2502   \u251c\u2500\u2500 RankConfig.lua\n\u2502   \u2502   \u251c\u2500\u2500 FoodConfig.lua\n\u2502   \u2502   \u2514\u2500\u2500 CustomizationData.lua\n\u2502   \u2514\u2500\u2500 Shared/\n\u2502       \u251c\u2500\u2500 SpatialGrid.lua\n\u2502       \u251c\u2500\u2500 Maid.lua\n\u2502       \u2514\u2500\u2500 Signal.lua\n\u251c\u2500\u2500 StarterPlayer/\n\u2502   \u2514\u2500\u2500 StarterPlayerScripts/\n\u2502       \u251c\u2500\u2500 SnakeController.lua\n\u2502       \u251c\u2500\u2500 CameraController.lua\n\u2502       \u251c\u2500\u2500 MobileControls.lua\n\u2502       \u2514\u2500\u2500 SnakeRenderer.lua\n\u2514\u2500\u2500 StarterGui/\n    \u251c\u2500\u2500 HUD/\n    \u251c\u2500\u2500 Leaderboard/\n    \u251c\u2500\u2500 CustomizationMenu/\n    \u251c\u2500\u2500 RevivePrompt/\n    \u2514\u2500\u2500 ShieldTimer/",
+    "securityChecklist": [
+      "Validate all movement direction vectors (unit length check)",
+      "Rate-limit boost/brake requests (cooldown enforcement server-side)",
+      "Never trust client gold amounts (server calculates from food collected)",
+      "Verify rank progression server-side (client UI is display only)",
+      "Validate customization choices against allowed values",
+      "Type-check all RemoteEvent parameters"
+    ],
+    "dataStoreStrategy": {
+      "playerData": "{rank, gold, reviveDonuts, customization, stats}",
+      "leaderboards": "OrderedDataStore for kills/length/food (monthly + all-time = 6 stores)",
+      "retryLogic": "3 attempts with exponential backoff (1s, 2s, 4s)",
+      "schemaVersioning": "{version=1, data={...}} for future migrations",
+      "saveCadence": "Every 5 minutes + on player leave + on rank up"
+    }
+  },
+  "antiPatternsToAvoid": [
+    "Don't replicate every body segment position every frame. Do: Server sends head position, client interpolates body.",
+    "Don't check collision between all snakes' all segments (O(n\u00b2)). Do: Use spatial grid to only check nearby segments (O(n)).",
+    "Don't create/destroy body segments on every grow/shrink. Do: Use object pool to reuse parts.",
+    "Don't update leaderboard OrderedDataStore every food collection. Do: Batch updates every 60 seconds + on leave.",
+    "Don't trust client-reported speed, position, or gold amounts. Do: Server validates all state changes.",
+    "Don't use while true do ... end without task.wait(). Do: Always include task.wait() in loops (prevents timeout).",
+    "Don't store snake references in _G or global tables. Do: Use proper module returns and clean up with Maid."
+  ],
+  "implementationPriorityOrder": [
+    "Snake Movement & Body Following (Core gameplay foundation)",
+    "Collision Detection (Death mechanics)",
+    "Food Spawning & Collection (Growth loop)",
+    "Boost/Brake Abilities (Tactical gameplay)",
+    "Shield System (Spawn protection)",
+    "Rank Progression & Gold (Progression incentive)",
+    "Magnet System (Rank benefit)",
+    "Leaderboards (Competitive layer)",
+    "Customization & DataStore (Personalization + persistence)",
+    "Revival System (Revive donuts)",
+    "Mobile Controls (Platform support)",
+    "Camera System (Zoom/pan/FOV)",
+    "Polish (VFX, SFX, UI animations, edge penalties, arena wraparound)"
+  ],
+  "deploymentReadiness": {
+    "status": "Manual deployment required (V1 does not automate publishing to Roblox cloud)",
+    "buildCommand": "rojo build default.project.json -o dist/SlitherSimulator.rbxlx",
+    "testingInStudio": [
+      "Open dist/SlitherSimulator.rbxlx in Roblox Studio",
+      "Enable Studio API Access for DataStore testing",
+      "Press F5 to test locally"
+    ],
+    "publishingToRoblox": [
+      "Test thoroughly in Studio",
+      "File \u2192 Publish to Roblox",
+      "Create new game or update existing",
+      "Configure game settings (max players: 20-50 recommended)",
+      "Test in live environment with multiple players"
+    ]
+  },
+  "additionalNotes": {
+    "inspirations": [
+      "Knit Framework: Service/controller pattern for SnakeManager, FoodSpawner, etc.",
+      "Nevermore Engine: Maid cleanup pattern for body segment management",
+      "ProfileService: DataStore session locking pattern (if needed for anti-dupe)"
+    ],
+    "performanceTargets": [
+      "60 FPS client-side with 20 snakes visible",
+      "<100ms latency for movement input \u2192 server response \u2192 visual update",
+      "<5KB/s bandwidth per player (network efficiency)",
+      "<500MB server memory usage (object pooling critical)"
+    ],
+    "knownLimitations": [
+      "No Roblox-TS support (pure Luau)",
+      "Manual publishing only (no Open Cloud API automation)",
+      "Monthly leaderboard reset requires manual script trigger (V2: scheduled server-side reset)",
+      "Edge penalties (-5% length) require careful tuning (too harsh = frustrating, too lenient = exploitable)"
+    ]
+  },
+  "completionStatus": "Scout Phase Complete. Ready for Architect phase to design detailed system architecture."
+}

@@ -1,0 +1,27 @@
+ASSET PLACEHOLDER: SnakeHead.rbxm
+
+This file represents a Roblox model asset for the snake head.
+
+To create this asset:
+1. Open Roblox Studio
+2. Create a Part with the following properties:
+   - Shape: Ball
+   - Size: Vector3.new(5, 5, 5)
+   - Material: SmoothPlastic
+   - Color: Bright blue (or any default color)
+   
+3. Add child objects for eyes:
+   - Create 2 small spheres (Size: 1, 1, 1)
+   - Position them on the front of the head
+   - Color: White with black pupils (use Decals)
+   
+4. Add a Mouth feature:
+   - Use a Decal or SurfaceGui
+   - Place on front face
+   - Can have different styles (default, sharp, round, fangs)
+   
+5. Group all parts together
+6. Name the model "SnakeHead"
+7. Right-click and "Save to File" as SnakeHead.rbxm
+
+This model will be used by SnakeManager to create snake heads for players.

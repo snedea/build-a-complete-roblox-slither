@@ -1,0 +1,254 @@
+{
+  "parallel_mode": false,
+  "total_tasks": 25,
+  "total_estimated_sequential": 120,
+  "tasks": [
+    {
+      "task_id": "task-1",
+      "name": "Project Setup",
+      "description": "Create Rojo project configuration and directory structure",
+      "working_directory": ".",
+      "files": ["default.project.json"],
+      "dependencies": [],
+      "build_commands": [
+        "mkdir -p src/ServerScriptService/GameSystems",
+        "mkdir -p src/ServerScriptService/Tests",
+        "mkdir -p src/ReplicatedStorage/Modules",
+        "mkdir -p src/ReplicatedStorage/Shared",
+        "mkdir -p src/StarterPlayer/StarterPlayerScripts",
+        "mkdir -p src/StarterGui/HUD",
+        "mkdir -p src/StarterGui/Leaderboard",
+        "mkdir -p src/StarterGui/CustomizationMenu",
+        "mkdir -p src/StarterGui/RevivePrompt",
+        "mkdir -p src/StarterGui/ShieldTimer",
+        "mkdir -p dist"
+      ]
+    },
+    {
+      "task_id": "task-2",
+      "name": "Shared Utility Modules",
+      "description": "Create Maid, Signal, SpatialGrid, BodySegmentPool",
+      "working_directory": ".",
+      "files": [
+        "src/ReplicatedStorage/Shared/Maid.lua",
+        "src/ReplicatedStorage/Shared/Signal.lua",
+        "src/ReplicatedStorage/Shared/SpatialGrid.lua",
+        "src/ReplicatedStorage/Shared/BodySegmentPool.lua"
+      ],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-3",
+      "name": "Configuration Modules",
+      "description": "Create SnakeConfig, RankConfig, FoodConfig, CustomizationData",
+      "working_directory": ".",
+      "files": [
+        "src/ReplicatedStorage/Modules/SnakeConfig.lua",
+        "src/ReplicatedStorage/Modules/RankConfig.lua",
+        "src/ReplicatedStorage/Modules/FoodConfig.lua",
+        "src/ReplicatedStorage/Modules/CustomizationData.lua"
+      ],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-4",
+      "name": "PlayerDataManager",
+      "description": "Create DataStore persistence service",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameSystems/PlayerDataManager.lua"],
+      "dependencies": ["task-3"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-5",
+      "name": "RankService",
+      "description": "Create rank progression calculations service",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameSystems/RankService.lua"],
+      "dependencies": ["task-3"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-6",
+      "name": "ShieldManager",
+      "description": "Create spawn protection service",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameSystems/ShieldManager.lua"],
+      "dependencies": ["task-5"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-7",
+      "name": "FoodSpawner",
+      "description": "Create food generation and collection service",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameSystems/FoodSpawner.lua"],
+      "dependencies": ["task-2", "task-3"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-8",
+      "name": "LeaderboardService",
+      "description": "Create monthly/all-time stats tracking service",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameSystems/LeaderboardService.lua"],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-9",
+      "name": "SnakeManager",
+      "description": "Create core snake lifecycle and collision service",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameSystems/SnakeManager.lua"],
+      "dependencies": ["task-2", "task-3", "task-5", "task-6", "task-7", "task-8"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-10",
+      "name": "ReviveService",
+      "description": "Create donut revival service",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameSystems/ReviveService.lua"],
+      "dependencies": ["task-4", "task-6", "task-9"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-11",
+      "name": "GameInitializer",
+      "description": "Create server startup script",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/GameInitializer.server.lua"],
+      "dependencies": ["task-9", "task-7", "task-4", "task-8"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-12",
+      "name": "SnakeController",
+      "description": "Create client input capture and movement requests",
+      "working_directory": ".",
+      "files": ["src/StarterPlayer/StarterPlayerScripts/SnakeController.lua"],
+      "dependencies": ["task-3"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-13",
+      "name": "MobileControls",
+      "description": "Create mobile thumbstick and buttons",
+      "working_directory": ".",
+      "files": ["src/StarterPlayer/StarterPlayerScripts/MobileControls.lua"],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-14",
+      "name": "CameraController",
+      "description": "Create zoom controls and FOV scaling",
+      "working_directory": ".",
+      "files": ["src/StarterPlayer/StarterPlayerScripts/CameraController.lua"],
+      "dependencies": ["task-12"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-15",
+      "name": "SnakeRenderer",
+      "description": "Create body segment interpolation for other players",
+      "working_directory": ".",
+      "files": ["src/StarterPlayer/StarterPlayerScripts/SnakeRenderer.lua"],
+      "dependencies": ["task-3"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-16",
+      "name": "HUD Client",
+      "description": "Create HUD for gold, rank, length, kills",
+      "working_directory": ".",
+      "files": ["src/StarterGui/HUD/HUD.client.lua"],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-17",
+      "name": "Leaderboard Client",
+      "description": "Create leaderboard UI with monthly/all-time tabs",
+      "working_directory": ".",
+      "files": ["src/StarterGui/Leaderboard/Leaderboard.client.lua"],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-18",
+      "name": "CustomizationMenu Client",
+      "description": "Create color picker and mouth/eye selection UI",
+      "working_directory": ".",
+      "files": ["src/StarterGui/CustomizationMenu/CustomizationMenu.client.lua"],
+      "dependencies": ["task-3"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-19",
+      "name": "RevivePrompt Client",
+      "description": "Create donut revival prompt UI",
+      "working_directory": ".",
+      "files": ["src/StarterGui/RevivePrompt/RevivePrompt.client.lua"],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-20",
+      "name": "ShieldTimer Client",
+      "description": "Create shield countdown overlay UI",
+      "working_directory": ".",
+      "files": ["src/StarterGui/ShieldTimer/ShieldTimer.client.lua"],
+      "dependencies": ["task-1"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-21",
+      "name": "SnakeManager Tests",
+      "description": "Create unit tests for SnakeManager",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/Tests/SnakeManager.spec.lua"],
+      "dependencies": ["task-9"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-22",
+      "name": "RankService Tests",
+      "description": "Create unit tests for RankService",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/Tests/RankService.spec.lua"],
+      "dependencies": ["task-5"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-23",
+      "name": "FoodSpawner Tests",
+      "description": "Create unit tests for FoodSpawner",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/Tests/FoodSpawner.spec.lua"],
+      "dependencies": ["task-7"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-24",
+      "name": "PlayerDataManager Tests",
+      "description": "Create unit tests for PlayerDataManager",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/Tests/PlayerDataManager.spec.lua"],
+      "dependencies": ["task-4"],
+      "build_commands": []
+    },
+    {
+      "task_id": "task-25",
+      "name": "Test Runner",
+      "description": "Create test runner init script",
+      "working_directory": ".",
+      "files": ["src/ServerScriptService/Tests/init.lua"],
+      "dependencies": ["task-21", "task-22", "task-23", "task-24"],
+      "build_commands": []
+    }
+  ]
+}

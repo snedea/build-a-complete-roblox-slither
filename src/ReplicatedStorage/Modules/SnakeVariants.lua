@@ -11,7 +11,7 @@ local SnakeVariants = {
 		bodyShape = "Ball",
 		headSize = Vector3.new(6, 6, 6),
 		bodySize = Vector3.new(4, 4, 4),
-		material = Enum.Material.Neon,
+		material = Enum.Material.SmoothPlastic,
 		unlocked = true, -- Always available
 	},
 	{
@@ -23,7 +23,7 @@ local SnakeVariants = {
 		bodyShape = "Ball",
 		headSize = Vector3.new(6, 6, 6),
 		bodySize = Vector3.new(4, 4, 4),
-		material = Enum.Material.Neon,
+		material = Enum.Material.SmoothPlastic,
 		unlocked = true,
 	},
 	{
@@ -35,7 +35,7 @@ local SnakeVariants = {
 		bodyShape = "Ball",
 		headSize = Vector3.new(6, 6, 6),
 		bodySize = Vector3.new(4, 4, 4),
-		material = Enum.Material.Neon,
+		material = Enum.Material.SmoothPlastic,
 		unlocked = true,
 	},
 	{
@@ -47,7 +47,7 @@ local SnakeVariants = {
 		bodyShape = "Cylinder",
 		headSize = Vector3.new(6, 6, 6),
 		bodySize = Vector3.new(4, 4, 4),
-		material = Enum.Material.Neon,
+		material = Enum.Material.SmoothPlastic,
 		unlocked = true,
 	},
 	{
@@ -59,7 +59,7 @@ local SnakeVariants = {
 		bodyShape = "Ball",
 		headSize = Vector3.new(6, 6, 6),
 		bodySize = Vector3.new(4, 4, 4),
-		material = Enum.Material.Neon,
+		material = Enum.Material.SmoothPlastic,
 		unlocked = true,
 	},
 	{
@@ -96,7 +96,7 @@ local SnakeVariants = {
 		bodyShape = "Ball",
 		headSize = Vector3.new(6, 6, 6),
 		bodySize = Vector3.new(4, 4, 4),
-		material = Enum.Material.Neon,
+		material = Enum.Material.SmoothPlastic,
 		unlocked = true,
 	},
 	{
@@ -108,7 +108,7 @@ local SnakeVariants = {
 		bodyShape = "Ball",
 		headSize = Vector3.new(6, 6, 6),
 		bodySize = Vector3.new(4, 4, 4),
-		material = Enum.Material.Neon,
+		material = Enum.Material.SmoothPlastic,
 		rainbow = true, -- Special effect
 		unlocked = true,
 	},

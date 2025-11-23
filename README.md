@@ -1,6 +1,15 @@
+<div align="center">
+  <img src="assets/images/hero-banner.png" alt="Snek Adventure - Multiplayer Snake Game" width="100%">
+</div>
+
 # Snek Adventure - Complete Implementation
 
 A fully-featured multiplayer snake adventure game built in Roblox with server-authoritative physics, 20-rank progression system, multiple arenas, and cross-platform support including gamepad controls.
+
+<div align="center">
+  <img src="assets/images/gameplay-1.png" alt="Grow Your Snake" width="48%">
+  <img src="assets/images/gameplay-2.png" alt="Compete with Other Players" width="48%">
+</div>
 
 ## 🎯 Pattern Library Feature - Build Smarter, Not Harder
 
